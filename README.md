@@ -1,5 +1,6 @@
 # Machine Learning on Databricks 
-This repository will have code files for a complete Data Science project on Databricks platform. This example try to solve a classification problem using the Pima Indian Diabetes dataset.
+This repository has code files for a complete Data Science project on Databricks platform. 
+This example try to solve a classification problem using the Pima Indian Diabetes dataset.
 
 #### Usage:
 ##### Using Databricks Repos
