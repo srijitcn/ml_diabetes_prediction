@@ -1,12 +1,12 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC #### Data Setup
-# MAGIC - If Unity catalog is not enabled, the datafiles need to be manually copied to an S3 folder or dbfs location
+# MAGIC - If Unity catalog is not enabled, the datafiles need to be manually copied to an S3 folder/ADLS Container location or dbfs location
 # MAGIC - Copy the `diabetes.csv` file
 # MAGIC - Copy the `Postural_Tremor_DA_Raw.csv` file
-# MAGIC - Create an iam role that has access to s3 path
+# MAGIC - If Data is in S3/ADLS, an IAM role or Azure Service Principal need to be created and configured
 # MAGIC - If UC is enabled, we recommend using a Volume for storing the raw data
-# MAGIC - If UC is not enabled, Create a cluster with the instance profile with the above IAM role
+# MAGIC - If UC is not enabled, Create a cluster with the instance profile/service principal with the above IAM role
 # MAGIC - Test access
 
 # COMMAND ----------
