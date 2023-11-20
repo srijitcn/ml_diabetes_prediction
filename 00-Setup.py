@@ -76,10 +76,7 @@ spark.sql(f"DROP TABLE IF EXISTS {inference_data_table_fs}")
 
 if volume_raw_data != "uc_not_available":
   spark.sql(f"CREATE VOLUME IF NOT EXISTS {volume_raw_data}")
-
-# COMMAND ----------
-
-dbutils.fs.cp(f"file:/Workspace{project_root_path}/_resources/data",raw_data_path,True)
+  dbutils.fs.cp(f"file:/Workspace{project_root_path}/_resources/data",raw_data_path,True)
 
 # COMMAND ----------
 
