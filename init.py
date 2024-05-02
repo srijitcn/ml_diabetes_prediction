@@ -22,8 +22,8 @@ project_root_path = '/'.join(current_path.split("/")[:-1])
 # COMMAND ----------
 
 ## CHANGE raw_data_path TO THE LOCATION WHERE RAW DATA FILE NEED TO BE COPIED
-#raw_data_path = "/Volumes/main/diabetes_prediction/raw_data"
-raw_data_path = "s3://databricks-e2demofieldengwest/external_location_srijit_nair"
+raw_data_path = "/Volumes/main/diabetes_prediction/raw_data"
+#raw_data_path = "s3://databricks-e2demofieldengwest/external_location_srijit_nair"
 
 
 # COMMAND ----------

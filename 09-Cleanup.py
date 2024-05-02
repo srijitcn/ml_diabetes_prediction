@@ -146,7 +146,3 @@ for experiment in experiments:
 
 experiment_base_path = f"Users/{user_email}/mlflow_experiments"
 dbutils.fs.rm(f"file:/Workspace/{experiment_base_path}",True)
-
-# COMMAND ----------
-
-

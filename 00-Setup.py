@@ -1,5 +1,11 @@
 # Databricks notebook source
 # MAGIC %md
+# MAGIC ####Compute
+# MAGIC Use a multi-node cluster with atleast `DBR13.3LTS ML` Runtime and 2-4 worker nodes. 
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC #### Data Setup
 # MAGIC - If Unity catalog is not enabled, the datafiles need to be manually copied to an S3 folder/ADLS Container location or dbfs location
 # MAGIC - Copy the `diabetes.csv` file

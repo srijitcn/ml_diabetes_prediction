@@ -115,43 +115,4 @@ display(prediction_df2)
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC #### Create UDF in UC
-# MAGIC Databricks provides a SQL-native syntax to register custom functions to schemas governed by Unity Catalog.[Read More](https://docs.databricks.com/en/udf/unity-catalog.html)
-
-# COMMAND ----------
-
-spark.sql(f"""
-CREATE FUNCTION IF NOT EXISTS {catalog}.{database}.predict_diabetes(
-  Age INTEGER,
-  BloodPressure INTEGER,
-  Insulin INTEGER,
-  BMI DECIMAL,
-  SkinThickness INTEGER,
-  DiabetesPedigreeFunction DECIMAL,
-  Pregnancies INTEGER,
-  Glucose INTEGER)
-RETURNS INTEGER
-LANGUAGE PYTHON
-AS $$
-  def predict_diabetes(Age,BloodPressure,Insulin,BMI,SkinThickness,DiabetesPedigreeFunction,Pregnancies,Glucose):
-    model = mlflow.sklearn.load_model(model_uri)
-    return model.predict(Age,BloodPressure,Insulin,BMI,SkinThickness,DiabetesPedigreeFunction,Pregnancies,Glucose)
-$$
-""")
-
-# COMMAND ----------
-
-display(spark.sql(f"""SELECT *, main.diabetes_prediction.predict_diabetes(
-  Age,
-  BloodPressure,
-  Insulin,
-  BMI,
-  SkinThickness,
-  DiabetesPedigreeFunction,
-  Pregnancies,
-  Glucose) AS Prediction FROM {inference_data_table_nonfs}"""))
-
-# COMMAND ----------
-
 

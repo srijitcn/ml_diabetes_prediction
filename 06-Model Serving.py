@@ -47,7 +47,7 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install databricks-sdk --upgrade
+# MAGIC %pip install databricks-sdk==0.26.0 --upgrade
 # MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
@@ -70,24 +70,26 @@ w = WorkspaceClient(host=db_host,token=db_token)
 
 endpoint_name = "diabetes_pred_nonfs_endpoint"
 
-served_models = [ServedModelInput(model_name=registered_model_name_non_fs, 
-                                   model_version=model_info.version, 
-                                   workload_size='Small',
-                                   workload_type='CPU', 
-                                   scale_to_zero_enabled='True')]
+served_entities = [ServedEntityInput(
+                      name="diabetes_pred",
+                      entity_name=registered_model_name_non_fs,
+                      entity_version=model_info.version,
+                      workload_size='Small',
+                      workload_type='CPU', 
+                      scale_to_zero_enabled=True)]
 
 
 print(f"Creating model serving endpoint {endpoint_name}")
 
 try:
   w.serving_endpoints.create_and_wait(name=endpoint_name, 
-                                     config=EndpointCoreConfigInput(served_models=served_models), 
+                                     config=EndpointCoreConfigInput(served_entities=served_entities), 
                                      timeout=timedelta(minutes=40)) 
 except: 
   # when the endpoint already exists, update it
 
   w.serving_endpoints.update_config_and_wait(name=endpoint_name, 
-                                             served_models=served_models, 
+                                             served_entities=served_entities, 
                                              timeout=timedelta(minutes=40))
 
 # COMMAND ----------
