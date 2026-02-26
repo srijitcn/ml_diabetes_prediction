@@ -4,7 +4,7 @@ This example try to solve a classification problem using the Pima Indian Diabete
 
 #### Usage:
 ##### Using Databricks Repos
-1) Open your Databricks Workspace. Create a compute with Databricks Runtime `13.3 LTS ML` or later.
+1) Open your Databricks Workspace. Create a compute with Databricks Runtime `17.3 LTS ML` or later.
 2) Clone this repo ([Read How](https://docs.databricks.com/en/repos/git-operations-with-repos.html#clone-a-repo-connected-to-a-remote-repo))
 
    **NOTE** If you are trying to connect to a repo which is access controlled, configure Github integration first ([Read how](https://docs.databricks.com/en/repos/get-access-tokens-from-git-provider.html))
