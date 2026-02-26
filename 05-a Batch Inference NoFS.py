@@ -1,7 +1,14 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC #### Batch and Streaming Inference on Databricks
-# MAGIC On Databricks, you can deploy MLflow models for offline (batch and streaming) inference. Databricks recommends that you use MLflow to deploy machine learning models for batch or streaming inference. For general information about working with MLflow models, see [Log, load, register, and deploy MLflow models](https://docs.databricks.com/en/mlflow/models.html).
+# MAGIC #### Batch and Streaming Inference on Databricks (Without Feature Store)
+# MAGIC On Databricks, you can deploy MLflow models for offline (batch and streaming) inference. Databricks recommends that you use MLflow to deploy machine learning models for batch or streaming inference.
+# MAGIC
+# MAGIC **Runtime Requirements**: DBR 17.3 LTS ML
+# MAGIC
+# MAGIC **Documentation**:
+# MAGIC - [Batch inference with MLflow models](https://docs.databricks.com/en/mlflow/models.html)
+# MAGIC - [Pandas UDFs (Vectorized UDFs)](https://docs.databricks.com/en/udf/pandas.html)
+# MAGIC - [mlflow.pyfunc.spark_udf](https://mlflow.org/docs/latest/python_api/mlflow.pyfunc.html#mlflow.pyfunc.spark_udf)
 
 # COMMAND ----------
 
@@ -74,18 +81,26 @@ display(prediction_df1)
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC #### Using Pandas UDF
-# MAGIC A pandas user-defined function (UDF)—also known as vectorized UDF—is a user-defined function that uses Apache Arrow to transfer data and pandas to work with the data. pandas UDFs allow vectorized operations that can increase performance up to 100x compared to row-at-a-time Python UDFs. [Read More](https://docs.databricks.com/en/udf/pandas.html)
+# MAGIC #### Using Pandas UDF (mapInPandas)
+# MAGIC A pandas user-defined function (UDF)—also known as vectorized UDF—is a user-defined function that uses Apache Arrow to transfer data and pandas to work with the data. pandas UDFs allow vectorized operations that can increase performance up to 100x compared to row-at-a-time Python UDFs.
 # MAGIC
+# MAGIC For batch inference, we use `mapInPandas` which provides better performance by:
+# MAGIC - Loading the model once per partition instead of once per batch
+# MAGIC - Processing data in vectorized chunks
+# MAGIC
+# MAGIC **Documentation**: 
+# MAGIC - [Pandas UDFs](https://docs.databricks.com/en/udf/pandas.html)
+# MAGIC - [mapInPandas](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.mapInPandas.html)
 
 # COMMAND ----------
 
-from pyspark.sql.functions import pandas_udf
 from typing import Iterator
 import pandas as pd
-from pyspark.sql.types import StructType, StructField,LongType,IntegerType, DoubleType
+from pyspark.sql.types import StructType, StructField, LongType, IntegerType, DoubleType
 
-schema = StructType([
+# Define output schema including the prediction column
+output_schema = StructType([
+    StructField("Id", LongType()),
     StructField("Age", IntegerType()),
     StructField("BloodPressure", IntegerType()),
     StructField("Insulin", IntegerType()),
@@ -97,20 +112,26 @@ schema = StructType([
     StructField("prediction", IntegerType())
 ])
 
-@pandas_udf(returnType=schema)
-def predict_diabetes_pudf(batches:Iterator[pd.DataFrame]) -> Iterator[pd.DataFrame]:
-  model = mlflow.sklearn.load_model(model_uri)
-  for batch in batches:
-    batch["prediction"] = model.predict(batch)
-    yield batch
-
+# Define the pandas UDF function for batch inference
+# The model is loaded once per partition for efficiency
+def predict_diabetes_pandas(batches: Iterator[pd.DataFrame]) -> Iterator[pd.DataFrame]:
+    # Load model once per partition (more efficient than loading per batch)
+    model = mlflow.sklearn.load_model(model_uri)
+    for batch in batches:
+        # Make predictions on the batch
+        predictions = model.predict(batch[feature_columns])
+        batch["prediction"] = predictions.astype(int)
+        yield batch
 
 # COMMAND ----------
 
+# Apply mapInPandas for efficient batch inference using pandas UDF
+# This approach is more performant for large datasets
+# Documentation: https://docs.databricks.com/en/udf/pandas.html#iterator-of-series-to-iterator-of-series-udf
 prediction_df2 = (spark
-                  .table(inference_data_table_nonfs)
-                  .withColumn("prediction",predict_diabetes_udf(*feature_columns))
-  )
+    .table(inference_data_table_nonfs)
+    .mapInPandas(predict_diabetes_pandas, schema=output_schema)
+)
 display(prediction_df2)
 
 # COMMAND ----------

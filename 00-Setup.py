@@ -1,7 +1,11 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC ####Compute
-# MAGIC Use a multi-node cluster with atleast `DBR13.3LTS ML` Runtime and 2-4 worker nodes. 
+# MAGIC #### Compute
+# MAGIC Use a multi-node cluster with **DBR 17.3 LTS ML** Runtime and 2-4 worker nodes.
+# MAGIC
+# MAGIC **Documentation**:
+# MAGIC - [Databricks Runtime 17.3 LTS ML](https://docs.databricks.com/en/release-notes/runtime/17.3lts-ml.html)
+# MAGIC - [Cluster configuration best practices](https://docs.databricks.com/en/compute/cluster-config-best-practices.html) 
 
 # COMMAND ----------
 
@@ -51,15 +55,17 @@ spark.sql(f"DROP TABLE IF EXISTS {physicals_results_table}")
 
 # COMMAND ----------
 
-#Drop the delta table
+# Drop the delta table
 spark.sql(f"DROP TABLE IF EXISTS {feature_table_name}")
 
-#Remove the feature store entry
-from databricks import feature_store
-fs = feature_store.FeatureStoreClient()
+# Remove the feature table entry using Feature Engineering Client
+# Documentation: https://docs.databricks.com/en/machine-learning/feature-store/uc/feature-tables-uc.html
+# Note: In DBR 17.3+, use FeatureEngineeringClient for Unity Catalog feature tables
+from databricks.feature_engineering import FeatureEngineeringClient
+fe = FeatureEngineeringClient()
 try:
-  #Check if feature table exists. Delete if exists
-  fs.drop_table(name=feature_table_name)
+  # Check if feature table exists. Delete if exists
+  fe.drop_table(name=feature_table_name)
 except:
   print(f"Feature table {feature_table_name} not found")
 

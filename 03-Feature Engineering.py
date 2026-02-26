@@ -2,21 +2,24 @@
 # MAGIC %md
 # MAGIC #### Feature Engineering in Databricks
 # MAGIC
-# MAGIC ##### Feature Store
+# MAGIC ##### Feature Engineering in Unity Catalog
 # MAGIC A feature store is a centralized repository that enables data scientists to find and share features and also ensures that the same code used to compute the feature values is used for model training and inference.
 # MAGIC
 # MAGIC Machine learning uses existing data to build a model to predict future outcomes. In almost all cases, the raw data requires preprocessing and transformation before it can be used to build a model. This process is called feature engineering, and the outputs of this process are called features - the building blocks of the model.
 # MAGIC
 # MAGIC Developing features is complex and time-consuming. An additional complication is that for machine learning, feature calculations need to be done for model training, and then again when the model is used to make predictions. These implementations may not be done by the same team or using the same code environment, which can lead to delays and errors. Also, different teams in an organization will often have similar feature needs but may not be aware of work that other teams have done. A feature store is designed to address these problems.
 # MAGIC
-# MAGIC **Databricks Feature Store** is fully integrated with other components of Databricks.
+# MAGIC **Databricks Feature Engineering** (formerly Feature Store) is fully integrated with other components of Databricks:
 # MAGIC
 # MAGIC - **Discoverability**: The Feature Store UI, accessible from the Databricks workspace, lets you browse and search for existing features.
 # MAGIC - **Lineage**: When you create a feature table in Databricks, the data sources used to create the feature table are saved and accessible. For each feature in a feature table, you can also access the models, notebooks, jobs, and endpoints that use the feature.
 # MAGIC - **Integration with model scoring and serving**: When you use features from Feature Store to train a model, the model is packaged with feature metadata. When you use the model for batch scoring or online inference, it automatically retrieves features from Feature Store. The caller does not need to know about them or include logic to look up or join features to score new data. This makes model deployment and updates much easier.
 # MAGIC - **Point-in-time lookups**: Feature Store supports time series and event-based use cases that require point-in-time correctness.
 # MAGIC
-# MAGIC [Read more about Databricks Feature Store](https://docs.databricks.com/en/machine-learning/feature-store/index.html)
+# MAGIC **Documentation**:
+# MAGIC - [Feature Engineering in Unity Catalog](https://docs.databricks.com/en/machine-learning/feature-store/uc/feature-tables-uc.html)
+# MAGIC - [Feature Engineering Python API](https://api-docs.databricks.com/python/feature-engineering/latest/index.html)
+# MAGIC - [Create a feature table in Unity Catalog](https://docs.databricks.com/en/machine-learning/feature-store/uc/create-feature-table-uc.html)
 
 # COMMAND ----------
 
@@ -90,20 +93,28 @@ display(feature_data)
 
 # COMMAND ----------
 
-from databricks import feature_store
-fs = feature_store.FeatureStoreClient()
+# In DBR 17.3+ use FeatureEngineeringClient for Unity Catalog feature tables
+# Documentation: https://api-docs.databricks.com/python/feature-engineering/latest/feature_engineering.client.html
+from databricks.feature_engineering import FeatureEngineeringClient
+fe = FeatureEngineeringClient()
 
 # COMMAND ----------
 
-fs.create_table(
+# Create the feature table in Unity Catalog
+# The create_table method creates a Delta table with feature metadata
+# Documentation: https://docs.databricks.com/en/machine-learning/feature-store/uc/create-feature-table-uc.html
+fe.create_table(
     name=feature_table_name,
     primary_keys="Id",
     df=feature_data,
+    description="Diabetes prediction features including patient demographics, lab results, and physical measurements"
 )
 
 # COMMAND ----------
 
-fs.write_table(
+# Write additional data to the feature table (merge mode for upserts)
+# This is useful for incremental updates to the feature table
+fe.write_table(
     name=feature_table_name,
     df=feature_data,
     mode="merge",

@@ -16,16 +16,19 @@
 
 # MAGIC %md
 # MAGIC ##### Cleanup Feature Tables
+# MAGIC
+# MAGIC **Documentation**: [Feature Engineering in Unity Catalog](https://docs.databricks.com/en/machine-learning/feature-store/uc/feature-tables-uc.html)
 
 # COMMAND ----------
 
-#Remove the feature store entry
-from databricks import feature_store
-fs = feature_store.FeatureStoreClient()
+# Remove the feature table entry using FeatureEngineeringClient (DBR 17.3+)
+# Documentation: https://api-docs.databricks.com/python/feature-engineering/latest/feature_engineering.client.html
+from databricks.feature_engineering import FeatureEngineeringClient
+fe = FeatureEngineeringClient()
 try:
-  #Check if feature table exists. Delete if exists
+  # Check if feature table exists. Delete if exists
   print(f"Deleting feature table {feature_table_name}")
-  fs.drop_table(name=feature_table_name)
+  fe.drop_table(name=feature_table_name)
 except:
   print(f"Feature table {feature_table_name} not found")
 
@@ -97,6 +100,10 @@ except:
 
 # MAGIC %md
 # MAGIC #### Delete Registered Models
+# MAGIC
+# MAGIC **Documentation**: 
+# MAGIC - [MLflow Model Registry](https://docs.databricks.com/en/mlflow/model-registry.html)
+# MAGIC - [Unity Catalog Model Registry](https://docs.databricks.com/en/machine-learning/manage-model-lifecycle/index.html)
 
 # COMMAND ----------
 
@@ -108,20 +115,30 @@ mlflow_client = MlflowClient()
 
 # COMMAND ----------
 
+# Cleanup for Workspace Model Registry (non-UC)
+# Note: In MLflow 3.x (DBR 17.3+), transition_model_version_stage is deprecated
+# but still works for workspace registry. For UC, use aliases instead.
 if not uc_enabled:  
   models = mlflow_client.search_registered_models(filter_string=f"name ILIKE '%{user_prefix}_%'")
-  for model in models:    
-    model_versions = model.latest_versions
+  for model in models:
+    # Get all versions and archive them before deletion
+    model_versions = mlflow_client.search_model_versions(f"name='{model.name}'")
     for model_version in model_versions:
       if model_version.current_stage != "Archived":
         print(f"Archiving version {model_version.version} of model {model.name}")
-        mlflow_client.transition_model_version_stage(name=model.name,version=model_version.version,stage="Archived")
+        mlflow_client.transition_model_version_stage(
+            name=model.name,
+            version=model_version.version,
+            stage="Archived"
+        )
     
     print(f"Deleting model {model.name}")
     mlflow_client.delete_registered_model(name=model.name)  
 
 # COMMAND ----------
 
+# Cleanup for Unity Catalog Model Registry
+# Note: UC models don't use stages, they use aliases
 if uc_enabled:
   models = mlflow_client.search_registered_models()
   for model in models:    

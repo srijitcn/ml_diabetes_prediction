@@ -2,11 +2,16 @@
 # MAGIC %md
 # MAGIC ###### Initialization
 # MAGIC
-# MAGIC We will initialize few variables and declare some utility functions
+# MAGIC We will initialize few variables and declare some utility functions.
 # MAGIC
 # MAGIC We can always invoke this notebook from other notebooks using the `%run` magic command. Variables and methods defined in this notebook will be available in the calling notebook. 
 # MAGIC
-# MAGIC To know more read the documentation [here](https://docs.databricks.com/en/notebooks/notebook-workflows.html)
+# MAGIC **Runtime Requirements**: DBR 17.3 LTS ML or later
+# MAGIC
+# MAGIC **Documentation**:
+# MAGIC - [Notebook workflows](https://docs.databricks.com/en/notebooks/notebook-workflows.html)
+# MAGIC - [Feature Engineering in Unity Catalog](https://docs.databricks.com/en/machine-learning/feature-store/uc/feature-tables-uc.html)
+# MAGIC - [MLflow Model Registry](https://docs.databricks.com/en/mlflow/model-registry.html)
 
 # COMMAND ----------
 
@@ -99,31 +104,40 @@ from mlflow.tracking.client import MlflowClient
 # COMMAND ----------
 
 
-#Gets the latest model details
+# Gets the latest model details
+# Documentation: https://docs.databricks.com/en/mlflow/model-registry.html
+# Note: In MLflow 3.x (DBR 17.3+), get_latest_versions with stages is deprecated. 
+# Use search_model_versions or get_model_version_by_alias instead.
 def get_latest_model_version(model_name: str, env_or_alias: str=""):  
-  #If UC is not enabled we will use workspace registry
+  # If UC is not enabled we will use workspace registry
   if not uc_enabled:
     mlflow.set_registry_uri("databricks")
     client = MlflowClient()
-    models = client.get_latest_versions(model_name, stages=[env_or_alias])
-    if len(models) >0:
+    # MLflow 3.x: Use search_model_versions instead of deprecated get_latest_versions
+    # Filter by stage if provided, otherwise get the latest version
+    filter_string = f"name='{model_name}'"
+    if env_or_alias:
+      filter_string += f" AND current_stage='{env_or_alias}'"
+    models = client.search_model_versions(filter_string, order_by=["version_number DESC"], max_results=1)
+    if len(models) > 0:
       return models[0]
     else:
       return None
-  #If UC is enabled we will use UC api
+  # If UC is enabled we will use UC Model Registry with aliases
+  # Documentation: https://docs.databricks.com/en/machine-learning/manage-model-lifecycle/index.html
   else:
     mlflow.set_registry_uri("databricks-uc")
     client = MlflowClient()
 
     if env_or_alias == "":
-      models = client.search_model_versions(f"name='{model_name}'")
-      if len(models) >0:
+      models = client.search_model_versions(f"name='{model_name}'", order_by=["version_number DESC"], max_results=1)
+      if len(models) > 0:
         return models[0]
       else:
         return None
     else:
       try:
-        return client.get_model_version_by_alias(name=model_name,alias=env_or_alias)
+        return client.get_model_version_by_alias(name=model_name, alias=env_or_alias)
       except:
         return None
 

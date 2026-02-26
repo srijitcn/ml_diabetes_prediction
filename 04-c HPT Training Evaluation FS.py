@@ -1,7 +1,14 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC #### Prepare Data
-# MAGIC For this exercise, we will train a LGBM classfier for Diabetes prediction. We will use a Feature Store to do Feature Lookup
+# MAGIC For this exercise, we will train a LGBM classifier for Diabetes prediction. We will use Feature Engineering with Feature Lookup from Unity Catalog.
+# MAGIC
+# MAGIC **Runtime Requirements**: DBR 17.3 LTS ML
+# MAGIC
+# MAGIC **Documentation**:
+# MAGIC - [Feature Engineering in Unity Catalog](https://docs.databricks.com/en/machine-learning/feature-store/uc/feature-tables-uc.html)
+# MAGIC - [Train models with feature tables](https://docs.databricks.com/en/machine-learning/feature-store/train-models-with-feature-store.html)
+# MAGIC - [Hyperopt distributed tuning](https://docs.databricks.com/en/machine-learning/automl-hyperparam-tuning/hyperopt-concepts.html)
 
 # COMMAND ----------
 
@@ -83,20 +90,26 @@ displayHTML(
 
 # COMMAND ----------
 
-from databricks import feature_store
-from databricks.feature_store import FeatureLookup
+# In DBR 17.3+ use FeatureEngineeringClient for Unity Catalog feature tables
+# Documentation: https://api-docs.databricks.com/python/feature-engineering/latest/feature_engineering.client.html
+from databricks.feature_engineering import FeatureEngineeringClient, FeatureLookup
 
-fs = feature_store.FeatureStoreClient()
+fe = FeatureEngineeringClient()
 
+# FeatureLookup specifies which features to retrieve from the feature table
+# The lookup_key is used to join the feature table with the input DataFrame
+# Documentation: https://docs.databricks.com/en/machine-learning/feature-store/train-models-with-feature-store.html
 feature_lookups = [
     FeatureLookup(
         table_name=feature_table_name,
-        feature_names= ["Age", "BloodPressure", "BMI", "Pregnancies"],
+        feature_names=["Age", "BloodPressure", "BMI", "Pregnancies"],
         lookup_key=[key_column]
     ),
 ]
 
-training_set = fs.create_training_set(
+# Create a training set that joins features from the feature table with the label data
+# The training set tracks which features were used, enabling automatic feature lookup at inference time
+training_set = fe.create_training_set(
     df=patient_lab_data,
     feature_lookups=feature_lookups,
     label=label_column,
@@ -326,23 +339,29 @@ print(f"F1 score of mode is {score}")
 
 # COMMAND ----------
 
+# Visualization of model performance metrics
+# Note: In scikit-learn 1.2+ (included in DBR 17.3), plot_* functions are replaced with Display classes
+# Documentation: https://scikit-learn.org/stable/modules/model_evaluation.html#visualizations
 import matplotlib.pyplot as plt
-from sklearn import metrics
+from sklearn.metrics import RocCurveDisplay, ConfusionMatrixDisplay, PrecisionRecallDisplay
 
 fig1, axs1 = plt.subplots(1)
-image_roc_curve = metrics.plot_roc_curve(selected_model, x_test, y_test,ax=axs1)
+RocCurveDisplay.from_estimator(selected_model, x_test, y_test, ax=axs1)
+plt.title("ROC Curve")
 plt.show()
 
 # COMMAND ----------
 
 fig2, axs2 = plt.subplots(1)
-image_confusion_matrix = metrics.plot_confusion_matrix(selected_model, x_test, y_test,ax=axs2)
+ConfusionMatrixDisplay.from_estimator(selected_model, x_test, y_test, ax=axs2)
+plt.title("Confusion Matrix")
 plt.show()
 
 # COMMAND ----------
 
 fig3, axs3 = plt.subplots(1)
-image_precision_recall_curve = metrics.plot_precision_recall_curve(selected_model, x_test, y_test,ax=axs3)
+PrecisionRecallDisplay.from_estimator(selected_model, x_test, y_test, ax=axs3)
+plt.title("Precision-Recall Curve")
 plt.show()
 
 # COMMAND ----------
@@ -358,17 +377,24 @@ signature = infer_signature(x_test,y_test)
 
 # COMMAND ----------
 
+# Log the model with feature metadata using FeatureEngineeringClient
+# This enables automatic feature lookup at inference time
+# Documentation: https://docs.databricks.com/en/machine-learning/feature-store/train-models-with-feature-store.html#log-model
 with mlflow.start_run() as run:
-    fs.log_model(
+    # Log model with feature engineering metadata
+    # Note: pip_requirements updated to match DBR 17.3 LTS ML library versions
+    fe.log_model(
         selected_model,
-        signature = signature,
+        signature=signature,
         artifact_path="model",
         flavor=mlflow.sklearn,    
         training_set=training_set,
         registered_model_name=registered_model_name_fs,
-        pip_requirements = ["lightgbm==3.3.5","scikit-learn==1.1.1"]
+        pip_requirements=["lightgbm==4.6.0", "scikit-learn==1.6.1"]
     )
-    eval_data = x_test
+    
+    # Evaluate model using MLflow's built-in evaluator
+    eval_data = x_test.copy()
     eval_data["target"] = y_test
     result = mlflow.evaluate(
         model_uri,
@@ -378,9 +404,11 @@ with mlflow.start_run() as run:
         evaluators=["default"]
     )
 
+    # Log hyperparameters from the best run
     run_data = mlflow.get_run(best_run.run_id).data.to_dictionary()
     mlflow.log_params(run_data["params"])
 
+    # Log visualization artifacts
     mlflow.log_figure(fig1, 'sklearn_roc_curve.png')
     mlflow.log_figure(fig2, 'sklearn_confusion_matrix.png')
     mlflow.log_figure(fig3, 'sklearn_precision_recall_curve.png')

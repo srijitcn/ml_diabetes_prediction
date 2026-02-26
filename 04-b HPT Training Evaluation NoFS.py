@@ -2,7 +2,14 @@
 # MAGIC %md
 # MAGIC #### Prepare Data
 # MAGIC
-# MAGIC For this exercise, we will train a LGBM classfier for Diabetes prediction. We will not be using Feature Store
+# MAGIC For this exercise, we will train a LGBM classifier for Diabetes prediction. This notebook does NOT use Feature Store - it manually joins tables to create features.
+# MAGIC
+# MAGIC **Runtime Requirements**: DBR 17.3 LTS ML
+# MAGIC
+# MAGIC **Documentation**:
+# MAGIC - [Train ML models on Databricks](https://docs.databricks.com/en/machine-learning/train-model/index.html)
+# MAGIC - [Hyperopt distributed tuning](https://docs.databricks.com/en/machine-learning/automl-hyperparam-tuning/hyperopt-concepts.html)
+# MAGIC - [MLflow Model Registry](https://docs.databricks.com/en/mlflow/model-registry.html)
 
 # COMMAND ----------
 
@@ -262,23 +269,29 @@ print(f"F1 score of mode is {score}")
 
 # COMMAND ----------
 
+# Visualization of model performance metrics
+# Note: In scikit-learn 1.2+ (included in DBR 17.3), plot_* functions are replaced with Display classes
+# Documentation: https://scikit-learn.org/stable/modules/model_evaluation.html#visualizations
 import matplotlib.pyplot as plt
-from sklearn import metrics
+from sklearn.metrics import RocCurveDisplay, ConfusionMatrixDisplay, PrecisionRecallDisplay
 
 fig1, axs1 = plt.subplots(1)
-image_roc_curve = metrics.plot_roc_curve(selected_model, x_test, y_test,ax=axs1)
+RocCurveDisplay.from_estimator(selected_model, x_test, y_test, ax=axs1)
+plt.title("ROC Curve")
 plt.show()
 
 # COMMAND ----------
 
 fig2, axs2 = plt.subplots(1)
-image_confusion_matrix = metrics.plot_confusion_matrix(selected_model, x_test, y_test,ax=axs2)
+ConfusionMatrixDisplay.from_estimator(selected_model, x_test, y_test, ax=axs2)
+plt.title("Confusion Matrix")
 plt.show()
 
 # COMMAND ----------
 
 fig3, axs3 = plt.subplots(1)
-image_precision_recall_curve = metrics.plot_precision_recall_curve(selected_model, x_test, y_test,ax=axs3)
+PrecisionRecallDisplay.from_estimator(selected_model, x_test, y_test, ax=axs3)
+plt.title("Precision-Recall Curve")
 plt.show()
 
 # COMMAND ----------
@@ -305,18 +318,22 @@ input_example = {
     "Glucose":85.0
     }
 
+# Log model to MLflow Model Registry
+# Documentation: https://docs.databricks.com/en/mlflow/models.html
 with mlflow.start_run() as run:
 
+    # Log model with updated pip_requirements for DBR 17.3 LTS ML
     model_info = mlflow.sklearn.log_model(
         selected_model,
-        signature = signature,
+        signature=signature,
         artifact_path="model",
         registered_model_name=registered_model_name_non_fs,
         input_example=input_example,
-        pip_requirements = ["lightgbm==3.3.5","scikit-learn==1.1.1"]
+        pip_requirements=["lightgbm==4.6.0", "scikit-learn==1.6.1"]
     )
 
-    eval_data = x_test
+    # Evaluate model using MLflow's built-in evaluator
+    eval_data = x_test.copy()
     eval_data["target"] = y_test
     result = mlflow.evaluate(
         model_info.model_uri,
@@ -326,9 +343,11 @@ with mlflow.start_run() as run:
         evaluators=["default"]
     )
 
+    # Log hyperparameters from the best run
     run_data = mlflow.get_run(best_run.run_id).data.to_dictionary()
     mlflow.log_params(run_data["params"])
 
+    # Log visualization artifacts
     mlflow.log_figure(fig1, 'sklearn_roc_curve.png')
     mlflow.log_figure(fig2, 'sklearn_confusion_matrix.png')
     mlflow.log_figure(fig3, 'sklearn_precision_recall_curve.png')
