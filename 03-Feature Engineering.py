@@ -119,7 +119,3 @@ fe.write_table(
     df=feature_data,
     mode="merge",
 )
-
-# COMMAND ----------
-
-

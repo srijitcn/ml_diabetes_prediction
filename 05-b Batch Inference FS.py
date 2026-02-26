@@ -87,7 +87,7 @@ data = spark.table(inference_data_table_fs)
 
 # score_batch automatically retrieves features from the feature table and makes predictions
 # The model was logged with fe.log_model() which captured the feature lookup metadata
-result_df = fe.score_batch(model_uri, data)
+result_df = fe.score_batch(model_uri=model_uri, df=data)
 
 # COMMAND ----------
 
@@ -104,26 +104,4 @@ display(result_df)
 
 # COMMAND ----------
 
-from typing import Iterator
-import pandas as pd
-from pyspark.sql.types import StructType, StructField, LongType, IntegerType, DoubleType, StringType
-
-# Example: Add a risk category based on prediction probability
-def add_risk_category(batches: Iterator[pd.DataFrame]) -> Iterator[pd.DataFrame]:
-    for batch in batches:
-        # Add custom post-processing: categorize predictions into risk levels
-        batch["risk_category"] = batch["prediction"].apply(
-            lambda x: "High Risk" if x == 1 else "Low Risk"
-        )
-        yield batch
-
-# Define output schema with the additional risk_category column
-output_schema_with_risk = result_df.schema.add(StructField("risk_category", StringType()))
-
-# Apply custom pandas processing on top of feature store predictions
-result_with_risk = result_df.mapInPandas(add_risk_category, schema=output_schema_with_risk)
-display(result_with_risk)
-
-# COMMAND ----------
-
-
+result_df.schema

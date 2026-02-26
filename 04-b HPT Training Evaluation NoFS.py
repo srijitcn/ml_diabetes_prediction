@@ -392,7 +392,3 @@ if uc_enabled:
   result = mlflow_client.set_registered_model_alias(registered_model_name_non_fs,
                                                     version=model_details.version, 
                                                     alias="challenger")
-
-# COMMAND ----------
-
-

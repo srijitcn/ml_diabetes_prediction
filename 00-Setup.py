@@ -35,7 +35,7 @@
 
 # COMMAND ----------
 
-spark.sql(f"CREATE DATABASE IF NOT EXISTS {database}")
+spark.sql(f"CREATE DATABASE IF NOT EXISTS {schema}")
 
 # COMMAND ----------
 
@@ -109,7 +109,3 @@ dbutils.fs.cp(src_folder,tgt_folder, True)
 # COMMAND ----------
 
 dbutils.fs.ls(tgt_folder)
-
-# COMMAND ----------
-
-

@@ -27,7 +27,7 @@ project_root_path = '/'.join(current_path.split("/")[:-1])
 # COMMAND ----------
 
 ## CHANGE raw_data_path TO THE LOCATION WHERE RAW DATA FILE NEED TO BE COPIED
-raw_data_path = "/Volumes/main/diabetes_prediction/raw_data"
+raw_data_path = "/Volumes/srijit_nair_ci_demo_catalog/diabetes_prediction/raw_data"
 #raw_data_path = "s3://databricks-e2demofieldengwest/external_location_srijit_nair"
 
 
@@ -44,16 +44,16 @@ uc_enabled = False if response["data_security_mode"]=="NONE" else True
 
 # COMMAND ----------
 
-catalog = "main"
-database = "diabetes_prediction"
+catalog = "srijit_nair_ci_demo_catalog"
+schema = "diabetes_prediction"
 
-demographic_table = f"{database}.patient_demographics_{user_prefix}"
-lab_results_table = f"{database}.patient_lab_results_{user_prefix}"
-physicals_results_table = f"{database}.patient_pysicals_{user_prefix}"
-feature_table_name = f"{database}.diabetes_features_{user_prefix}"
-inference_data_table_nonfs = f"{database}.patient_data_nonfs_{user_prefix}"
-inference_data_table_fs = f"{database}.patient_data_fs_{user_prefix}"
-raw_data_table = f"{database}.diabetes_raw_{user_prefix}"
+demographic_table = f"{schema}.patient_demographics_{user_prefix}"
+lab_results_table = f"{schema}.patient_lab_results_{user_prefix}"
+physicals_results_table = f"{schema}.patient_pysicals_{user_prefix}"
+feature_table_name = f"{schema}.diabetes_features_{user_prefix}"
+inference_data_table_nonfs = f"{schema}.patient_data_nonfs_{user_prefix}"
+inference_data_table_fs = f"{schema}.patient_data_fs_{user_prefix}"
+raw_data_table = f"{schema}.diabetes_raw_{user_prefix}"
 volume_raw_data = "uc_not_available"
 model_registry_uri = "databricks"
 registered_model_name_non_fs = f"{user_prefix}_diabetes_prediction_nonfs"
@@ -73,8 +73,8 @@ if uc_enabled :
   raw_data_table = f"{catalog}.{raw_data_table}"
 
   model_registry_uri = "databricks-uc"
-  registered_model_name_non_fs = f"{catalog}.{database}.{registered_model_name_non_fs}"
-  registered_model_name_fs = f"{catalog}.{database}.{registered_model_name_fs}"  
+  registered_model_name_non_fs = f"{catalog}.{schema}.{registered_model_name_non_fs}"
+  registered_model_name_fs = f"{catalog}.{schema}.{registered_model_name_fs}"  
 
 if raw_data_path.startswith("/Volumes/"):
   volume_raw_data = raw_data_path.replace("/Volumes/","").replace("/",".")
@@ -130,7 +130,9 @@ def get_latest_model_version(model_name: str, env_or_alias: str=""):
     client = MlflowClient()
 
     if env_or_alias == "":
-      models = client.search_model_versions(f"name='{model_name}'", order_by=["version_number DESC"], max_results=1)
+      all_versions = client.search_model_versions(f"name='{model_name}'")
+      models = sorted(all_versions, key=lambda mv: mv.creation_timestamp, reverse=True)
+
       if len(models) > 0:
         return models[0]
       else:

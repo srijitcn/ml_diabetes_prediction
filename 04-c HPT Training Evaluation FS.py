@@ -384,8 +384,7 @@ with mlflow.start_run() as run:
     # Log model with feature engineering metadata
     # Note: pip_requirements updated to match DBR 17.3 LTS ML library versions
     fe.log_model(
-        selected_model,
-        signature=signature,
+        model=selected_model,
         artifact_path="model",
         flavor=mlflow.sklearn,    
         training_set=training_set,
@@ -448,7 +447,3 @@ if uc_enabled:
   result = mlflow_client.set_registered_model_alias(registered_model_name_fs,
                                                     version=model_details.version, 
                                                     alias="challenger")
-
-# COMMAND ----------
-
-

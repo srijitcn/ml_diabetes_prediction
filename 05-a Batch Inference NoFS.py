@@ -39,7 +39,7 @@ display(spark.sql(f"SELECT * FROM {inference_data_table_nonfs}"))
 
 # MAGIC %md
 # MAGIC #### Load Model
-# MAGIC Let us lookup the model thats tagged as `Production` in model registry to use for our batch inference
+# MAGIC Let us lookup the model thats tagged as `champion` in model registry to use for our batch inference
 
 # COMMAND ----------
 
@@ -133,7 +133,3 @@ prediction_df2 = (spark
     .mapInPandas(predict_diabetes_pandas, schema=output_schema)
 )
 display(prediction_df2)
-
-# COMMAND ----------
-
-
